@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"id": "final-rest",
+	"version": "${version}",
+	"name": "Final Rest",
+	"description": "Never lose your loot again! Final Rest safely stores your inventory inside a unique grave upon death. Reclaim your lost belongings using the soulbound key generated when you perish.",
+	"authors": [
+		"SantiagoGP"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "GNU General Public License v3.0",
+	"icon": "assets/final-rest/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.finalrest.FinalRest"
+		],
+		"fabric-datagen": [
+			"com.finalrest.FinalRestDataGenerator"
+		]
+	},
+	"mixins": [
+		"final-rest.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	}
+}

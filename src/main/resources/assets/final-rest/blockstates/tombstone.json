@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "final-rest:block/tombstone_block" },
+    "facing=east":  { "model": "final-rest:block/tombstone_block", "y": 90 },
+    "facing=south": { "model": "final-rest:block/tombstone_block", "y": 180 },
+    "facing=west":  { "model": "final-rest:block/tombstone_block", "y": 270 }
+  }
+}
