@@ -1,5 +1,7 @@
 package com.finalrest.item;
 
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -21,27 +23,33 @@ public class TombstoneNoteItem extends Item {
 
     public static ItemStack createFor(UUID tombId, RegistryKey<World> dimension, BlockPos pos) {
         ItemStack stack = new ItemStack(ModItems.TOMBSTONE_NOTE);
-        NbtCompound nbt = stack.getOrCreateNbt();
+        NbtCompound nbt = new NbtCompound();
         nbt.putUuid(TombstoneKeyItem.TAG, tombId);
         nbt.putInt("X", pos.getX());
         nbt.putInt("Y", pos.getY());
         nbt.putInt("Z", pos.getZ());
         nbt.putString("Dim", dimension.getValue().toString());
+        stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbt));
         return stack;
     }
 
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack stack = user.getStackInHand(hand);
-        NbtCompound nbt = stack.getNbt();
+        NbtComponent component = stack.get(DataComponentTypes.CUSTOM_DATA);
 
         if (!world.isClient) {
-            if (nbt != null && nbt.contains("X")) {
-                String message = "Tu tumba está en X: " + nbt.getInt("X")
-                        + "  Y: " + nbt.getInt("Y")
-                        + "  Z: " + nbt.getInt("Z")
-                        + " (" + dimensionName(nbt.getString("Dim")) + ")";
-                user.sendMessage(Text.literal(message), false);
+            if (component != null) {
+                NbtCompound nbt = component.copyNbt();
+                if (nbt.contains("X")) {
+                    String message = "Tu tumba está en X: " + nbt.getInt("X")
+                            + "  Y: " + nbt.getInt("Y")
+                            + "  Z: " + nbt.getInt("Z")
+                            + " (" + dimensionName(nbt.getString("Dim")) + ")";
+                    user.sendMessage(Text.literal(message), false);
+                } else {
+                    user.sendMessage(Text.literal("Esta nota no tiene coordenadas."), true);
+                }
             } else {
                 user.sendMessage(Text.literal("Esta nota no tiene coordenadas."), true);
             }

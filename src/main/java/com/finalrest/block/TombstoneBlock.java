@@ -2,6 +2,7 @@ package com.finalrest.block;
 
 import com.finalrest.block.entity.TombstoneBlockEntity;
 import com.finalrest.item.TombstoneKeyItem;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
@@ -11,14 +12,15 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
@@ -41,6 +43,11 @@ public class TombstoneBlock extends BlockWithEntity {
     }
 
     @Override
+    protected MapCodec<? extends TombstoneBlock> getCodec() {
+        return createCodec(TombstoneBlock::new);
+    }
+
+    @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
         builder.add(FACING);
     }
@@ -52,17 +59,17 @@ public class TombstoneBlock extends BlockWithEntity {
     }
 
     @Override
-    public BlockState rotate(BlockState state, BlockRotation rotation) {
+    protected BlockState rotate(BlockState state, BlockRotation rotation) {
         return state.with(FACING, rotation.rotate(state.get(FACING)));
     }
 
     @Override
-    public BlockState mirror(BlockState state, BlockMirror mirror) {
+    protected BlockState mirror(BlockState state, BlockMirror mirror) {
         return state.rotate(mirror.getRotation(state.get(FACING)));
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+    protected VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         Direction facing = state.get(FACING);
         return (facing == Direction.NORTH || facing == Direction.SOUTH) ? SHAPE_NS : SHAPE_EW;
     }
@@ -74,31 +81,34 @@ public class TombstoneBlock extends BlockWithEntity {
     }
 
     @Override
-    public BlockRenderType getRenderType(BlockState state) {
+    protected BlockRenderType getRenderType(BlockState state) {
         return BlockRenderType.MODEL;
     }
 
     @Override
-    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
+                                             PlayerEntity player, Hand hand, BlockHitResult hit) {
         if (world.isClient) {
-            return ActionResult.SUCCESS;
+            return ItemActionResult.SUCCESS;
         }
 
         if (world.getBlockEntity(pos) instanceof TombstoneBlockEntity tombstone) {
-            boolean hasKey = TombstoneKeyItem.matches(player.getStackInHand(hand), tombstone.getTombId());
+            boolean hasKey = TombstoneKeyItem.matches(stack, tombstone.getTombId());
             boolean isOwner = tombstone.isOwner(player);
 
             if (isOwner || hasKey) {
+                // Los items van directo al inventario
                 tombstone.giveItemsTo(player);
+                // onStateReplaced borra las llaves de esta tumba
                 world.removeBlock(pos, false);
-                return ActionResult.CONSUME;
+                return ItemActionResult.SUCCESS;
             }
 
             player.sendMessage(Text.literal("Esta tumba no es tuya."), true);
-            return ActionResult.FAIL;
+            return ItemActionResult.FAIL;
         }
 
-        return ActionResult.PASS;
+        return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
@@ -106,6 +116,7 @@ public class TombstoneBlock extends BlockWithEntity {
         if (state.getBlock() != newState.getBlock()) {
             if (!world.isClient && world instanceof ServerWorld serverWorld
                     && world.getBlockEntity(pos) instanceof TombstoneBlockEntity tombstone) {
+                // Si ya se entregaron al jugador, esto no suelta nada (lista vacía)
                 tombstone.dropAllItems(serverWorld, pos);
                 TombstoneKeyItem.removeKeysFor(serverWorld.getServer(), tombstone.getTombId());
             }

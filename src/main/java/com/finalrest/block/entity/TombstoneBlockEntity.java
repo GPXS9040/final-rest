@@ -9,6 +9,7 @@ import net.minecraft.inventory.Inventories;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 public class TombstoneBlockEntity extends BlockEntity implements Inventory {
 
+    // 0-35 mochila, 36-39 armadura, 40 offhand
     private DefaultedList<ItemStack> items = DefaultedList.ofSize(41, ItemStack.EMPTY);
     private UUID ownerUuid;
     private String ownerName = "";
@@ -56,6 +58,11 @@ public class TombstoneBlockEntity extends BlockEntity implements Inventory {
         markDirty();
     }
 
+    /**
+     * Devuelve los ítems directamente al inventario del jugador.
+     * Cada ítem vuelve a su slot original si está libre; si no, al primer hueco.
+     * Lo que no quepa cae al suelo (invulnerable) junto al jugador.
+     */
     public void giveItemsTo(PlayerEntity player) {
         PlayerInventory inv = player.getInventory();
         DefaultedList<ItemStack> leftovers = DefaultedList.of();
@@ -107,6 +114,10 @@ public class TombstoneBlockEntity extends BlockEntity implements Inventory {
         player.getWorld().spawnEntity(entity);
     }
 
+    /**
+     * Respaldo para cuando la tumba se destruye sin un jugador con permiso
+     * (explosión, creativo de otro jugador, etc.). Suelta invulnerables.
+     */
     public void dropAllItems(ServerWorld world, BlockPos pos) {
         for (ItemStack stack : items) {
             if (stack.isEmpty()) continue;
@@ -174,9 +185,9 @@ public class TombstoneBlockEntity extends BlockEntity implements Inventory {
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt) {
-        super.writeNbt(nbt);
-        Inventories.writeNbt(nbt, items);
+    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.writeNbt(nbt, registryLookup);
+        Inventories.writeNbt(nbt, items, registryLookup);
         if (ownerUuid != null) {
             nbt.putUuid("OwnerUUID", ownerUuid);
         }
@@ -187,10 +198,10 @@ public class TombstoneBlockEntity extends BlockEntity implements Inventory {
     }
 
     @Override
-    public void readNbt(NbtCompound nbt) {
-        super.readNbt(nbt);
+    public void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
+        super.readNbt(nbt, registryLookup);
         items = DefaultedList.ofSize(41, ItemStack.EMPTY);
-        Inventories.readNbt(nbt, items);
+        Inventories.readNbt(nbt, items, registryLookup);
         if (nbt.containsUuid("OwnerUUID")) {
             ownerUuid = nbt.getUuid("OwnerUUID");
         }

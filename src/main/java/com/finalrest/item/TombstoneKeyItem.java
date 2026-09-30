@@ -1,5 +1,7 @@
 package com.finalrest.item;
 
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -19,27 +21,35 @@ public class TombstoneKeyItem extends Item {
 
     public static ItemStack createFor(UUID tombId) {
         ItemStack stack = new ItemStack(ModItems.TOMBSTONE_KEY);
-        stack.getOrCreateNbt().putUuid(TAG, tombId);
+        NbtCompound nbt = new NbtCompound();
+        nbt.putUuid(TAG, tombId);
+        stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbt));
         return stack;
     }
 
     @Nullable
     public static UUID getTombId(ItemStack stack) {
         if (!stack.isOf(ModItems.TOMBSTONE_KEY)) return null;
-        NbtCompound nbt = stack.getNbt();
-        return (nbt != null && nbt.containsUuid(TAG)) ? nbt.getUuid(TAG) : null;
+        NbtComponent component = stack.get(DataComponentTypes.CUSTOM_DATA);
+        if (component == null) return null;
+        NbtCompound nbt = component.copyNbt();
+        return nbt.containsUuid(TAG) ? nbt.getUuid(TAG) : null;
     }
 
     public static boolean matches(ItemStack stack, @Nullable UUID tombId) {
         return tombId != null && tombId.equals(getTombId(stack));
     }
 
+    /** Llave o nota que pertenecen a esa tumba. */
     private static boolean belongsTo(ItemStack stack, UUID tombId) {
         if (!stack.isOf(ModItems.TOMBSTONE_KEY) && !stack.isOf(ModItems.TOMBSTONE_NOTE)) return false;
-        NbtCompound nbt = stack.getNbt();
-        return nbt != null && nbt.containsUuid(TAG) && tombId.equals(nbt.getUuid(TAG));
+        NbtComponent component = stack.get(DataComponentTypes.CUSTOM_DATA);
+        if (component == null) return false;
+        NbtCompound nbt = component.copyNbt();
+        return nbt.containsUuid(TAG) && tombId.equals(nbt.getUuid(TAG));
     }
 
+    /** Borra del inventario de todos los jugadores online las llaves y notas de esa tumba. */
     public static void removeKeysFor(MinecraftServer server, @Nullable UUID tombId) {
         if (tombId == null) return;
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
